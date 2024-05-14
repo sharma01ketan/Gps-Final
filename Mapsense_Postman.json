@@ -1,0 +1,283 @@
+{
+	"info": {
+		"_postman_id": "74df2a29-b1fb-48fc-bf81-dacb1e0e91c4",
+		"name": "Mapsense",
+		"description": "Task: Location-based Service API\n\n``` javascript\n//user.model.ks\nconst userSchema = new Schema(\n    {\n        username: {\n            type: String,\n            required: true,\n            unique: true\n        },\n        password: {\n            type: String,\n            required: [true, 'Password is required']\n        },\n        refreshToken: {\n            type: String\n        },\n        locations: [\n            {\n                type: Schema.Types.ObjectId,\n                ref: 'Location'\n            }\n        ]\n    },\n    {\n        timestamps: true\n    }\n)\n//location.model.js\nconst locationSchema = mongoose.Schema({\n    latitude:{\n        type: Number,\n        required: [true,\"Latitude is required\"]\n    },\n    longitude: {\n        type: Number,\n        required: [true,\"Longitude is required\"]\n    }\n},{\n    timestamps: true\n});\n\n ```",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29775784"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"sharma01ketan@gmail.com\",\n    \"password\": \"sharma01ketan\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/register",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"register"
+							]
+						},
+						"description": "``` javascript\n// Code Snippet from user.controller.js\nconst registerUser = asyncHandler( async (req, res) => {\n    const {username,password} = req.body\n    console.log(`The username and password ${username} ${password}`)\n    if(\n        [username,password].some((field)=>field?.trim()===\"\")\n    ){\n        throw new ApiError(400,\"All Fields are Required\")\n    }\n    const existedUser = await User.findOne({\n        $or:[{username}]\n    })\n    if(existedUser){\n        throw new ApiError(409,\"User with username already exists\")\n    }\n    const user = await User.create({\n        username,\n        password\n    })\n    const createdUser = await User.findById(user._id)\n    .select(\n        \"-password -refreshToken\"\n    )\n    if (!createdUser) {\n        throw new ApiError(500, \"Something went wrong while registering the user\")\n    }\n    return res.status(201).json(\n        new ApiResponse(200, createdUser, \"User registered Successfully\")\n    )\n})\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer "
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"sharma01ketan@gmail.com\",\n    \"password\": \"sharma01ketan\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"login"
+							]
+						},
+						"description": "``` javascript\n// Code Scippet from user.controller.js\nconst loginUser = asyncHandler(async (req, res) =>{\n    const {username, password} = req.body\n    if (!username) {\n        throw new ApiError(400, \"username is required\")\n    }\n    const user = await User.findOne({\n        $or: [{username}]\n    }).populate('locations')\n    if (!user) {\n        throw new ApiError(404, \"User does not exist\")\n    }\n   const isPasswordValid = await user.isPasswordCorrect(password)\n   if (!isPasswordValid) {\n    throw new ApiError(401, \"Invalid user credentials\")\n    }\n   const {accessToken, refreshToken} = await generateAccessAndRefereshTokens(user._id)\n    const loggedInUser = await User.findById(user._id).select(\"-password -refreshToken\")\n    const options = {\n        httpOnly: true,\n        secure: true\n    }\n    return res\n    .status(200)\n    .cookie(\"accessToken\", accessToken, options)\n    .cookie(\"refreshToken\", refreshToken, options)\n    .cookie(\"userLocations\", JSON.stringify(user.locations), options) // Set cookie for user's locations\n    .json(\n        new ApiResponse(\n            200, \n            {\n                user: loggedInUser,\n                accessToken,\n                refreshToken\n            },\n            \"User logged In Successfully\"\n        )\n    );\n})\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "accessToken",
+								"value": "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NjNlODRiMWQ2ZjE0M2FmNTRmOWE0MTgiLCJ1c2VybmFtZSI6InNoYXJtYTAxa2V0YW4iLCJpYXQiOjE3MTUzNzMyMzgsImV4cCI6MTcxNTQ1OTYzOH0.qpFAUZqEZ_R4t7rO-EwAWLTtKNFsLoFQIe_rRkge-hA\""
+							},
+							{
+								"key": "refreshToken",
+								"value": "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NjNlODRiMWQ2ZjE0M2FmNTRmOWE0MTgiLCJpYXQiOjE3MTUzNzMyMzgsImV4cCI6MTcxNjIzNzIzOH0.GLNdmnOTemveFMqF2Qil-CEAePc6rNH8_Z5-qxOSfHs\""
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "//NOT FUNCTIONING\n//FRONTEND REQUEST IS WORKING PROPERLR\n{\n    \"username\": \"sharma01ketan@gmail.com\",\n    \"password\": \"sharma01ketan\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/logout",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"logout"
+							]
+						},
+						"description": "``` javascript\n//Code Snipper from user.controller.js\nconst logoutUser = asyncHandler(async(req, res) => {\n    await User.findByIdAndUpdate(\n        req.user._id,\n        {\n            $unset: {\n                refreshToken: 1 // this removes the field from document\n            }\n        },\n        {\n            new: true\n        }\n    )\n    const options = {\n        httpOnly: true,\n        secure: true\n    }\n    return res\n    .status(200)\n    .clearCookie(\"accessToken\", options)\n    .clearCookie(\"refreshToken\", options)\n    .json(new ApiResponse(200, {}, \"User logged Out\"))\n})\n\n ```"
+					},
+					"response": []
+				}
+			],
+			"description": "``` javascript\n//Code Snippet from user.routes.js\nimport { Router } from \"express\";\nimport { loginUser, logoutUser, refreshAccessToken, registerUser } from \"../controllers/user.controller.js\";\nimport { verifyJWT } from \"../middlewares/auth.middleware.js\";\n\nconst router = Router()\nrouter.route(\"/register\").post(registerUser)\nrouter.route('/login').post(loginUser)\n//secured routes\nrouter.route(\"/logout\").post(verifyJWT,logoutUser)\nrouter.route(\"/refresh-token\").post(refreshAccessToken)\n\nexport default router\n\n ```"
+		},
+		{
+			"name": "GPS",
+			"item": [
+				{
+					"name": "Location",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"latitude\": \"40.741895\",\n    \"longitude\": \"-73.989308\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/location",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"location"
+							]
+						},
+						"description": "``` javascript\n//Code Snippet from location.routes.js\nconst createLocation = asyncHandler(async (req, res) => {\n    const { latitude, longitude } = req.body;\n    console.log(`${latitude} ${longitude}createlocation`)\n    if(\n        [latitude,longitude].some((field)=>field?.trim()===\"\")\n    ){\n        throw new ApiError(400,\"All Fields are Required\")\n    }\n    const existedLocation = await Location.findOne({\n        $or:[{latitude,longitude}]\n    })\n    if(existedLocation){\n        throw new ApiError(409,\"Location already exists\")\n    }\n    try {\n        const location = await Location.create({\n            latitude,\n            longitude\n        });\n        const createdLocation = await Location.findById(location._id)\n        if(!createLocation){\n            throw new ApiError(500, \"Something went wrong while registering the location\")\n        }\n        console.log(`Location Added: ${latitude} ${longitude}`)\n        return res.status(201).json(\n            new ApiResponse(201, location, 'Location saved successfully')\n        );\n    } catch (error) {\n        throw new ApiError(500, 'Failed to save location data');\n    }\n});\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "Distance",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"coordinate1\": {\n    \"latitude\": \"40.7128\",\n    \"longitude\": \"-74.0060\"\n  },\n  \"coordinate2\": {\n    \"latitude\": \"34.0522\",\n    \"longitude\": \"-118.2437\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/distance",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"distance"
+							]
+						},
+						"description": "``` javascript\n//Code Snippet from location.routes.js\nconst calculateDistance = asyncHandler(async (req, res) => {\n    const { coordinate1, coordinate2 } = req.body;\n    console.log(\"The request body is:\", req.body);\n\n    if (!coordinate1.latitude || !coordinate1.longitude || !coordinate2.longitude || !coordinate2.latitude) {\n        throw new ApiError(400, \"All Fields are Necessary. Value passed as empty.\");\n    }\n\n    const distance = haversine(coordinate1, coordinate2);\n\n    return res.status(200).json(new ApiResponse(200, {\n        \"Message\": \"Calculated Haversine Distance\",\n        \"Distance in Meters\": distance\n    }));\n});\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "Closest",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"latitude\": \"48.8566\",\n      \"longitude\": \"2.3522\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/closest",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"closest"
+							]
+						},
+						"description": "``` javascript\n//Code Snippet from location.routes.js\nconst closestDistance = asyncHandler(async (req, res) => {\n    const { latitude, longitude } = req.body;\n    console.log(\"The request body is:\", req.body);\n\n    if (!latitude || !longitude) {\n        throw new ApiError(400, \"All Fields are Necessary. Value passed as empty.\");\n    }\n\n    const locations = await Location.find().select('latitude longitude -_id');\n    if (locations.length === 0) {\n        throw new ApiError(404, \"No Locations Found\");\n    }\n\n    let closestLocation;\n    let closestDistance = Infinity;\n\n    locations.forEach(location => {\n        console.log(`Latitude and Longitude is ${latitude}, ${longitude}`);\n        const distance = haversine({ latitude, longitude }, { latitude: location.latitude, longitude: location.longitude });\n        if (distance < closestDistance) {\n            closestDistance = distance;\n            closestLocation = location;\n        }\n    });\n\n    console.log(\"Found The Closest Location\", closestLocation);\n    \n    return res.status(200).json({\n        \"Message\": \"Found The Closest Location\",\n        \"Closest Distance in Meters\": closestDistance,\n        \"Location\": closestLocation\n    });\n});\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "AddLocation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NjQyMThkMjI5MjZkMDNhMGY5YjFlNmQiLCJ1c2VybmFtZSI6IjJAMi5jb20iLCJpYXQiOjE3MTU2MDc3NjIsImV4cCI6MTcxNTY5NDE2Mn0.ufZynpRj462mV7Hq6x0MDqN5FYsHu_c0YeyWDHM8Hvk",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"latitude\": 34.741891,\n    \"longitude\": -13.989308,\n    \"username\": \"sharma01ketan@gmail.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/addLocation",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"addLocation"
+							]
+						},
+						"description": "```\n//Code Snippet from location.routes.js\nconst addLocation = asyncHandler(async (req, res) => {\n    const { latitude, longitude, username } = req.body;\n    console.log(req.body)\n    console.log(`${latitude} ${longitude} ${username} addLocation`);\n    try {\n        const user = await User.findOne({\n            $or:[{username}]\n        })\n        console.log(`User id is ${user._id}`)\n        if (!user) {\n            throw new ApiError(404, \"User not found\");\n        }\n        const location = await Location.create({\n            latitude,\n            longitude\n        });\n        user.locations.push(location);\n        await user.save();\n        console.log(`Location added to user: ${latitude} ${longitude}`);\n        return res.status(201).json(\n            new ApiResponse(201, user.locations, 'Location added to user successfully')\n        );\n    } catch (error) {\n        throw new ApiError(500, 'Failed to add location to user');\n    }\n});\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "AllLocations",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"sharma01ketan@gmail.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/allLocations",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"allLocations"
+							]
+						},
+						"description": "``` javascript\n//Code Snippet from location.routes.js\nconst allLocations = asyncHandler(async (req, res) => {\n    try {\n        const { username } = req.body; // Assuming username is sent in the request body\n\n        const user = await User.findOne({ username }).populate('locations')\n\n        if (!user) {\n            throw new ApiError(404, \"User not found\");\n        }\n\n        const locations = user.locations.map(location =>({\n            latitude: location.latitude,\n            longitude: location.longitude\n        }))\n\n        console.log(`User id is ${user._id}`);\n        console.log(`The locations array is: ${locations}`);\n\n        return res.status(200).json(new ApiResponse(200, locations, 'Returned all locations'));\n    } catch (error) {\n        console.error('Error fetching locations:', error);\n        throw new ApiError(500, 'Failed to fetch locations');\n    }\n});\n\n ```"
+					},
+					"response": []
+				}
+			],
+			"description": "``` javascript\n//Code Snippet from location.routes.js\nimport { Router } from \"express\";\nimport { createLocation, calculateDistance, closestDistance, addLocation, allLocations, getLocationById } \nfrom \"../controllers/location.controller.js\";\nconst router = Router();\nrouter.route(\"/location\").post(createLocation);\nrouter.route('/distance').post(calculateDistance)\nrouter.route('/closest').post(closestDistance)\nrouter.route('/addLocation').post(addLocation)\nrouter.route('/allLocations').post(allLocations)\nrouter.route(\"/:locationId\").get(getLocationById);\nexport default router;\n\n ```"
+		}
+	]
+}
